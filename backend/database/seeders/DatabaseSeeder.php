@@ -1,5 +1,6 @@
 <?php
 
+// ...existing code...
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -8,11 +9,10 @@ use App\Models\Siswa;
 use App\Models\Pelanggaran;
 use App\Models\BuktiPelanggaran;
 use App\Models\Dudi;
-use App\Models\logbook;
+use App\Models\Logbook;
+use App\Models\Magang;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Symfony\Component\HttpKernel\EventListener\DebugHandlersListener;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,8 +21,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         User::factory()->count(10)->create();
         Kelas::factory()->count(30)->create();
         Siswa::factory()->count(50)->create();
@@ -30,5 +28,19 @@ class DatabaseSeeder extends Seeder
         BuktiPelanggaran::factory()->count(10)->create();
         Logbook::factory()->count(50)->create();
         Dudi::factory()->count(10)->create();
+
+        // Pastikan ada data relasi untuk digunakan oleh Magang
+        $students = Siswa::all();
+        $dudis = Dudi::all();
+        $gurus = User::all();
+
+        // Buat Magang dengan referensi yang valid (menghindari null pada foreign keys)
+        Magang::factory()->count(10)->make()->each(function ($magang) use ($students, $dudis, $gurus) {
+            $magang->siswa_id = $students->random()->id;
+            $magang->dudi_id = $dudis->random()->id;
+            $magang->guru_pembimbing_id = $gurus->random()->id;
+            $magang->save();
+        });
     }
 }
+

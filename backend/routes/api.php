@@ -8,20 +8,10 @@ use App\Http\Controllers\PelanggaranController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LogbookController;
 use App\Http\Controllers\DudiController;
+use App\Http\Controllers\MagangController;
 
-// Public routes (no authentication required)
-Route::apiResource('siswa', SiswaController::class)->only(['index', 'show']);
-Route::apiResource('kelas', KelasController::class)->only(['index', 'show']);
-
-// Authentication routes
-Route::post('/register', [App\Http\Controllers\AuthController::class, 'register']);
-Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-Route::post('/verify-token', [AuthController::class, 'verifyToken'])->middleware('auth:sanctum');
-
-// Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
-    // Student management (create, update, delete)
+    // Student management
     Route::apiResource('siswa', SiswaController::class)->except(['index', 'show']);
     Route::apiResource('kelas', KelasController::class)->except(['index', 'show']);
 
@@ -39,4 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // DUDI management
     Route::apiResource('dudi', DudiController::class);
     Route::get('/dudi/bidang/{bidang}', [DudiController::class, 'getByBidangUsaha']);
+
+    // Magang management ✅
+    Route::apiResource('magang', MagangController::class);
 });

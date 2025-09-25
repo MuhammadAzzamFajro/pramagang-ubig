@@ -1,75 +1,205 @@
+// ...existing code...
+import React from "react";
+import { supabase } from "@/lib/supabaseClient";
+import GuruSidebar from "@/components/GuruSidebar";
+import Navbar from "@/components/Navbar";
+import DashboardTabs from "@/components/ui/tabs";
+import { FaUserGraduate, FaBuilding, FaClipboardList, FaChalkboardTeacher } from "react-icons/fa";
+import { HiOutlineCalendar } from "react-icons/hi";
 
-
-import React from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import Table from '@/components/Table';
-import Card from '@/components/Card';
-import { FaUserGraduate, FaBuilding, FaClipboardList } from 'react-icons/fa';
-
-// Asynchronously fetch data from Supabase
 async function getDashboardData() {
-  const { count: totalStudents } = await supabase
-    .from("siswas")
-    .select("*", { count: "exact", head: true });
+  const [studentsRes, partnersRes, internsRes, gurusRes] = await Promise.all([
+    supabase.from("siswas").select("*", { count: "exact", head: true }),
+    supabase.from("dudis").select("*", { count: "exact", head: true }),
+    supabase.from("magangs").select("*", { count: "exact", head: true }),
+    supabase.from("users").select("*", { count: "exact", head: true }),
+  ]);
 
-  const { count: totalPartners } = await supabase
-    .from("dudis") 
-    .select("*", { count: "exact", head: true });
+  const totalStudents = studentsRes?.count ?? 0;
+  const totalPartners = partnersRes?.count ?? 0;
+  const totalInterns = internsRes?.count ?? 0;
+  const totalGurus = gurusRes?.count ?? 0;
 
-  const { count: totalInterns } = await supabase
-    .from("magangs") 
-    .select("*", { count: "exact", head: true });
-
-  const { data: recentLogs } = await supabase
-    .from("logbook") 
-    .select("id, siswa:siswas(nama), activity, status") // relasi ke siswas
+  const { data: recentMagangs } = await supabase
+    .from("magangs")
+    .select(`
+      id,
+      siswa:siswas(id,nama),
+      dudi:dudis(id,nama),
+      guru:users(id,nama),
+      tanggal_mulai,
+      tanggal_selesai,
+      status,
+      created_at
+    `)
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const logRes = await supabase
+    .from("logbooks")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", startOfDay.toISOString())
+    .lte("created_at", endOfDay.toISOString());
+
+  const todayLogCount = logRes?.count ?? 0;
+
   return {
-    totalStudents: totalStudents ?? 0,
-    totalPartners: totalPartners ?? 0,
-    totalInterns: totalInterns ?? 0,
-    recentLogs:
-      recentLogs?.map((log: any) => ({
-        id: log.id,
-        name: (log.siswa as any)?.nama ?? "-",
-        activity: log.activity,
-        status: log.status,
+    totalStudents,
+    totalPartners,
+    totalInterns,
+    totalGurus,
+    recentMagangs:
+      recentMagangs?.map((m: any) => ({
+        id: m.id,
+        nama: (m.siswa as any)?.nama ?? "-",
+        dudi: (m.dudi as any)?.nama ?? "-",
+        guru: (m.guru as any)?.nama ?? "-",
+        tanggal_mulai: m.tanggal_mulai,
+        tanggal_selesai: m.tanggal_selesai,
+        status: m.status ?? "Aktif",
       })) ?? [],
+    todayLogCount,
   };
 }
 
 const DashboardPage = async () => {
-  const { totalStudents, totalPartners, totalInterns, recentLogs } = await getDashboardData();
-  
-  const dashboardData = [
-    { title: 'Total Siswa', value: totalStudents, icon: <FaUserGraduate /> },
-    { title: 'Mitra DUDI', value: totalPartners, icon: <FaBuilding /> },
-    { title: 'Siswa Magang', value: totalInterns, icon: <FaUserGraduate /> },
-    { title: 'Laporan Harian', value: '98%', icon: <FaClipboardList /> },
+  const { totalStudents, totalPartners, totalInterns, totalGurus, recentMagangs, todayLogCount } =
+    await getDashboardData();
+
+  const activePercent = totalStudents > 0 ? Math.round((totalInterns / totalStudents) * 100) : 0;
+  const logbookPercent = 100;
+
+  const metrics = [
+    { title: "Total Siswa", value: totalStudents, icon: <FaUserGraduate className="text-2xl" /> },
+    { title: "DUDI Partner", value: totalPartners, icon: <FaBuilding className="text-2xl" /> },
+    { title: "Guru Pembimbing", value: totalGurus, icon: <FaChalkboardTeacher className="text-2xl" /> },
+    { title: "Logbook Hari Ini", value: todayLogCount, icon: <FaClipboardList className="text-2xl" /> },
   ];
 
-  const tableHeaders = ['ID', 'Nama', 'Aktivitas', 'Status'];
-
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
-      
-      {/* Metrics Cards Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {dashboardData.map((item, index) => (
-          <Card key={index} title={item.title} value={item.value} icon={item.icon} />
-        ))}
-      </div>
-      
-      {/* Recent Activity Table Section */}
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Aktivitas Terbaru</h2>
-        <Table headers={tableHeaders} data={recentLogs} />
-      </div>
+    <div className="flex min-h-screen bg-gray-50">
+      <GuruSidebar />
+
+      <main className="flex-1 p-6">
+        <Navbar />
+
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+            <p className="text-gray-600">Selamat datang di sistem pelaporan magang siswa SMK Negeri 1 Surabaya</p>
+          </div>
+
+          {/* client navigation tabs */}
+          <div>
+            {/* DashboardTabs adalah client component yang akan router.push ke /dashboard/siswa atau /dashboard/guru */}
+            {/* It lives at: src/components/ui/tabs.tsx */}
+            <DashboardTabs />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {metrics.map((m, i) => (
+            <div key={i} className="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-lg flex items-center justify-center">
+                {m.icon}
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">{m.title}</p>
+                <p className="text-2xl font-semibold text-gray-800">{m.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Magang Terbaru</h2>
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <HiOutlineCalendar /> Terbaru
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {recentMagangs.length === 0 && <p className="text-gray-500">Belum ada data magang.</p>}
+              {recentMagangs.map((m: any) => (
+                <div key={m.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 font-bold">
+                      {String(m.nama).charAt(0) || "U"}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">{m.nama}</p>
+                      <p className="text-sm text-gray-500">
+                        {m.dudi} • <span className="text-xs text-gray-400">Pembimbing: {m.guru}</span>
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {m.tanggal_mulai ? new Date(m.tanggal_mulai).toLocaleDateString() : "-"} —{" "}
+                        {m.tanggal_selesai ? new Date(m.tanggal_selesai).toLocaleDateString() : "..."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <span
+                      className={`text-sm px-3 py-1 rounded-full ${
+                        String(m.status).toLowerCase().includes("aktif")
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {m.status ?? "Aktif"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-lg space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">Progress Overview</h3>
+              <p className="text-sm text-gray-500">Ringkasan status magang dan logbook</p>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Siswa Aktif Magang</span>
+                    <span>{activePercent}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-3 rounded mt-2">
+                    <div className="h-3 bg-cyan-500 rounded" style={{ width: `${activePercent}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Logbook Hari Ini</span>
+                    <span>{todayLogCount}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-3 rounded mt-2">
+                    <div className="h-3 bg-indigo-500 rounded" style={{ width: `${logbookPercent}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">DUDI Aktif</h4>
+              <div className="text-3xl font-semibold text-gray-900">{totalPartners}</div>
+              <p className="text-sm text-gray-500">Perusahaan mitra terdaftar</p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
 
 export default DashboardPage;
+// ...existing code...
