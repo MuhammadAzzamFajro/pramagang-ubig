@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Table from '@/components/Table';
