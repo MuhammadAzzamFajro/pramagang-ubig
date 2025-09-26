@@ -49,9 +49,6 @@ const DashboardPage = async () => {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar kiri */}
-      <Sidebar />
-
       {/* Konten utama */}
       <main className="flex-1 p-6">
         <Navbar />
