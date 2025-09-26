@@ -28,11 +28,11 @@ export default function GuruSidebar() {
           <span className={`font-medium ${isActive("/dashboard/guru") ? "text-white" : "text-gray-800"}`}>Dashboard</span>
         </Link>
 
-        <Link href="/dashboard/guru/dudis" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/dashboard/guru/dudis") ? "bg-cyan-500 text-white" : "hover:bg-gray-50"}`}>
-          <FiBriefcase className={`text-xl ${isActive("/dashboard/guru/dudis") ? "text-white" : "text-cyan-600"}`} />
+        <Link href="/dashboard/guru/dudi" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/dashboard/guru/dudi") ? "bg-cyan-500 text-white" : "hover:bg-gray-50"}`}>
+          <FiBriefcase className={`text-xl ${isActive("/dashboard/guru/dudi") ? "text-white" : "text-cyan-600"}`} />
           <div>
-            <div className={`font-medium ${isActive("/dashboard/guru/dudis") ? "text-white" : "text-gray-800"}`}>DUDI</div>
-            <div className={`text-xs ${isActive("/dashboard/guru/dudis") ? "text-white/80" : "text-gray-400"}`}>Dunia Usaha & Industri</div>
+            <div className={`font-medium ${isActive("/dashboard/guru/dudi") ? "text-white" : "text-gray-800"}`}>DUDI</div>
+            <div className={`text-xs ${isActive("/dashboard/guru/dudi") ? "text-white/80" : "text-gray-400"}`}>Dunia Usaha & Industri</div>
           </div>
         </Link>
 
