@@ -48,7 +48,7 @@ const DashboardPage = async () => {
   const tableHeaders = ["ID", "Nama", "Aktivitas", "Status"];
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen">
       {/* Konten utama */}
       <main className="flex-1 p-6">
         <Navbar />

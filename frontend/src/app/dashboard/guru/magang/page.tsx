@@ -1,161 +1,269 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Navbar from "@/components/Navbar";
+import Modal from "@/components/Modal";
 
-interface InternStudent {
+// Tipe data
+type Magang = {
   id: number;
-  nis: string;
-  nama: string;
-  email?: string;
-  kontak?: string;
-  kelas?: string;
-  dudi: string;
-  start_date: string;
-  end_date: string;
-  status: "Aktif" | "Selesai" | "Pending";
-  nilai?: string;
-}
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  status: string;
+  judul_magang: string;
+  deskripsi: string;
+  siswa: { id: number; nama: string } | null;
+  dudi: { id: number; nama: string } | null;
+  guru: { id: number; name: string } | null;
+};
+type Siswa = { id: number; nama: string };
+type Dudi = { id: number; nama: string };
+type Guru = { id: number; name: string };
 
-function CardStat({ title, value }: { title: string; value: number | string }) {
-  return (
-    <div className="p-4 text-center bg-white rounded-lg shadow">
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-gray-600">{title}</div>
-    </div>
-  );
-}
+const ManajemenMagangPage = () => {
+  const [magangList, setMagangList] = useState<Magang[]>([]);
+  const [siswas, setSiswas] = useState<Siswa[]>([]);
+  const [dudis, setDudis] = useState<Dudi[]>([]);
+  const [gurus, setGurus] = useState<Guru[]>([]);
 
-export default function ManajemenMagangPage() {
-  const [students, setStudents] = useState<InternStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentMagang, setCurrentMagang] = useState<Magang | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+  const [formData, setFormData] = useState({
+    siswa_id: "",
+    dudi_id: "",
+    guru_pembimbing_id: "",
+    judul_magang: "",
+    deskripsi: "",
+    tanggal_mulai: "",
+    tanggal_selesai: "",
+    status: "Pending",
+  });
 
-      try {
-        const { data: magangData, error: supabaseError } = await supabase.from("magangs_siswa").select(`
-            id,
-            deskripsi,
-            judul_magang,
-            tanggal_mulai,
-            tanggal_selesai,
-            status,
-            siswa:siswa_id!inner (
-              nis,
-              nama,
-              email,
-              kontak,
-              kelas:kelas_id!inner ( kelas )
-            ),
-            dudi:dudi_id!inner ( nama )
-          `);
+  const fetchAllData = useCallback(async () => {
+    setLoading(true);
+    // Mengambil semua data yang dibutuhkan secara paralel
+    const [magangRes, siswaRes, dudiRes, guruRes] = await Promise.all([
+      supabase.from("magangs_siswa").select(`
+        id, tanggal_mulai, tanggal_selesai, status, judul_magang, deskripsi,
+        siswa:siswas (id, nama),
+        dudi:dudis (id, nama),
+        guru:users (id, name)
+      `),
+      supabase.from("siswas").select("id, nama"),
+      supabase.from("dudis").select("id, nama"),
+      supabase.from("users").select("id, name"), // Asumsi: guru ada di tabel users
+    ]);
 
-        if (supabaseError) {
-          throw supabaseError;
-        }
+    if (magangRes.error) console.error("Error fetching magang:", magangRes.error.message);
+    else setMagangList((magangRes.data as any) || []);
 
-        const formattedData = magangData.map((item: any) => ({
-          id: item.id,
-          nis: item.siswa?.nis || "N/A",
-          nama: item.siswa?.nama || "Siswa Dihapus",
-          email: item.siswa?.email || "-",
-          kontak: item.siswa?.kontak || "-",
-          kelas: item.siswa?.kelas?.kelas || "-",
-          dudi: item.dudi?.nama || "DUDI Dihapus",
-          start_date: item.tanggal_mulai || "N/A",
-          end_date: item.tanggal_selesai || "N/A",
-          status: item.status || "Pending",
-          nilai: item.nilai || "-",
-        }));
+    if (siswaRes.error) console.error("Error fetching siswa:", siswaRes.error.message);
+    else setSiswas(siswaRes.data || []);
 
-        setStudents(formattedData);
-      } catch (err: any) {
-        console.error("Error fetching data from Supabase:", err);
-        setError("Gagal memuat data siswa magang.");
-        setStudents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (dudiRes.error) console.error("Error fetching dudi:", dudiRes.error.message);
+    else setDudis(dudiRes.data || []);
 
-    fetchData();
+    if (guruRes.error) console.error("Error fetching guru:", guruRes.error.message);
+    else setGurus(guruRes.data || []);
+
+    setLoading(false);
   }, []);
 
-  if (loading) return <div className="p-6">Loading data from Supabase...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
-  const total = students.length;
-  const aktif = students.filter((s) => s.status === "Aktif").length;
-  const selesai = students.filter((s) => s.status === "Selesai").length;
-  const pending = students.filter((s) => s.status === "Pending").length;
+  const handleOpenModal = (magang: Magang | null = null) => {
+    if (magang) {
+      setIsEditing(true);
+      setCurrentMagang(magang);
+      setFormData({
+        siswa_id: String(magang.siswa?.id || ""),
+        dudi_id: String(magang.dudi?.id || ""),
+        guru_pembimbing_id: String(magang.guru?.id || ""),
+        judul_magang: magang.judul_magang,
+        deskripsi: magang.deskripsi,
+        tanggal_mulai: magang.tanggal_mulai,
+        tanggal_selesai: magang.tanggal_selesai,
+        status: magang.status,
+      });
+    } else {
+      setIsEditing(false);
+      setCurrentMagang(null);
+      setFormData({
+        siswa_id: "",
+        dudi_id: "",
+        guru_pembimbing_id: "",
+        judul_magang: "",
+        deskripsi: "",
+        tanggal_mulai: "",
+        tanggal_selesai: "",
+        status: "Pending",
+      });
+    }
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => setShowModal(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const submitData = {
+      siswa_id: Number(formData.siswa_id),
+      dudi_id: Number(formData.dudi_id),
+      guru_pembimbing_id: Number(formData.guru_pembimbing_id),
+      judul_magang: formData.judul_magang,
+      deskripsi: formData.deskripsi,
+      tanggal_mulai: formData.tanggal_mulai,
+      tanggal_selesai: formData.tanggal_selesai,
+      status: formData.status,
+    };
+
+    if (isEditing && currentMagang) {
+      const { error } = await supabase.from("magangs_siswa").update(submitData).eq("id", currentMagang.id);
+      if (error) alert("Error: " + error.message);
+    } else {
+      const { error } = await supabase.from("magangs_siswa").insert([submitData]);
+      if (error) alert("Error: " + error.message);
+    }
+    fetchAllData();
+    handleCloseModal();
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Yakin ingin menghapus data magang ini?")) {
+      const { error } = await supabase.from("magangs_siswa").delete().eq("id", id);
+      if (error) alert("Error: " + error.message);
+      else fetchAllData();
+    }
+  };
+
+  if (loading) return <div className="p-6 text-center">Memuat data...</div>;
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Manajemen Siswa Magang</h1>
-      <p className="text-gray-600">Kelola data siswa yang sedang melaksanakan magang di industri</p>
-
-      {/* Statistik */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <CardStat title="Total Siswa" value={total} />
-        <CardStat title="Aktif" value={aktif} />
-        <CardStat title="Selesai" value={selesai} />
-        <CardStat title="Pending" value={pending} />
+    <>
+      <Navbar />
+      <div className="mb-6 mt-9">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Manajemen Magang</h1>
+        <p className="text-gray-600">Kelola penempatan magang siswa dengan mitra DUDI.</p>
       </div>
-
-      {/* Tombol Aksi */}
-      <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-        <input type="text" placeholder="Cari siswa, NIS, kelas, DUDI..." className="w-full px-3 py-2 border rounded-md md:w-1/3" />
-        <div className="flex w-full gap-2 md:w-auto">
-          <button className="w-full px-4 py-2 text-white bg-blue-500 rounded-md">+ Tambah Siswa</button>
-          <button className="w-full px-4 py-2 text-white bg-green-500 rounded-md">Download PDF</button>
-        </div>
+      <div className="flex justify-end mb-6">
+        <button onClick={() => handleOpenModal(null)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+          + Tetapkan Magang Baru
+        </button>
       </div>
-
-      {/* Tabel */}
-      <div className="overflow-x-auto border rounded-md">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
+      <div className="bg-white rounded-lg shadow-lg w-full overflow-x-auto">
+        <table className="w-full text-sm text-left text-gray-600">
+          <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
             <tr>
-              <th className="px-4 py-2 text-left">Siswa</th>
-              <th className="px-4 py-2 text-left">Kelas</th>
-              <th className="px-4 py-2 text-left">DUDI</th>
-              <th className="px-4 py-2 text-left">Periode</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Nilai</th>
-              <th className="px-4 py-2">Aksi</th>
+              <th className="px-6 py-3">Siswa</th>
+              <th className="px-6 py-3">DUDI</th>
+              <th className="px-6 py-3">Guru Pembimbing</th>
+              <th className="px-6 py-3">Periode</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {students.map((s) => (
-              <tr key={s.id} className="border-t">
-                <td className="px-4 py-2">
-                  <div className="font-semibold">{s.nama}</div>
-                  <div className="text-xs text-gray-600">NIS: {s.nis}</div>
-                  <div className="text-xs text-gray-500">
-                    {s.email} | {s.kontak}
-                  </div>
+            {magangList.map((m) => (
+              <tr key={m.id} className="border-b hover:bg-gray-50">
+                <td className="px-6 py-4 font-medium text-gray-900">{m.siswa?.nama || "N/A"}</td>
+                <td className="px-6 py-4">{m.dudi?.nama || "N/A"}</td>
+                <td className="px-6 py-4">{m.guru?.name || "N/A"}</td>
+                <td className="px-6 py-4">
+                  {m.tanggal_mulai} - {m.tanggal_selesai}
                 </td>
-                <td className="px-4 py-2">{s.kelas}</td>
-                <td className="px-4 py-2">{s.dudi}</td>
-                <td className="px-4 py-2">
-                  {s.start_date} s.d {s.end_date}
-                </td>
-                <td className="px-4 py-2">
-                  <span className={`px-2 py-1 rounded text-xs ${s.status === "Aktif" ? "bg-green-100 text-green-700" : s.status === "Selesai" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>{s.status}</span>
-                </td>
-                <td className="px-4 py-2">{s.nilai}</td>
-                <td className="px-4 py-2 text-center">
-                  <button className="text-blue-500 hover:underline">Edit</button>
+                <td className="px-6 py-4">{m.status}</td>
+                <td className="px-6 py-4 text-center flex justify-center gap-2">
+                  <button onClick={() => handleOpenModal(m)} className="text-blue-500 hover:underline">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(m.id)} className="text-red-500 hover:underline">
+                    Hapus
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+
+      <Modal show={showModal} onClose={handleCloseModal} title={isEditing ? "Edit Data Magang" : "Tambah Data Magang"}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-1">Siswa</label>
+            <select name="siswa_id" value={formData.siswa_id} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md">
+              <option value="">Pilih Siswa</option>
+              {siswas.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nama}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">DUDI</label>
+            <select name="dudi_id" value={formData.dudi_id} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md">
+              <option value="">Pilih DUDI</option>
+              {dudis.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nama}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Guru Pembimbing</label>
+            <select name="guru_pembimbing_id" value={formData.guru_pembimbing_id} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md">
+              <option value="">Pilih Guru</option>
+              {gurus.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Judul Magang</label>
+            <input type="text" name="judul_magang" value={formData.judul_magang} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-1">Tanggal Mulai</label>
+              <input type="date" name="tanggal_mulai" value={formData.tanggal_mulai} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md" />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Tanggal Selesai</label>
+              <input type="date" name="tanggal_selesai" value={formData.tanggal_selesai} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Status</label>
+            <select name="status" value={formData.status} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md">
+              <option value="Pending">Pending</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 rounded-md">
+              Batal
+            </button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">
+              {isEditing ? "Simpan" : "Tambah"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
-}
+};
+
+export default ManajemenMagangPage;
