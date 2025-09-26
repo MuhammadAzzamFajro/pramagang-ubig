@@ -17,7 +17,7 @@ export default function Sidebar() {
     {
       name: "DUDI",
       desc: "Dunia Usaha & Industri",
-      href: "/dashboard/dudi",
+      href: "/dashboard/dudis",
       icon: <Building2 size={20} />,
     },
     {

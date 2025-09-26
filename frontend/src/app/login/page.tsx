@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -17,21 +18,29 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Simulasikan panggilan API atau Supabase
+      // Panggilan API untuk login
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.session) {
+        // Set session di Supabase client
+        const { error: setSessionError } = await supabase.auth.setSession(data.session);
+        if (setSessionError) {
+          throw new Error('Gagal menyimpan session: ' + setSessionError.message);
+        }
+        // Simpan token di localStorage untuk persistence
+        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
         router.push('/dashboard/guru');
       } else {
-        const data = await response.json();
         setError(data.message || 'Login gagal. Periksa kembali email dan password Anda.');
       }
-    } catch (err) {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }

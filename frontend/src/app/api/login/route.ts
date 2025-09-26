@@ -21,9 +21,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Jika Supabase berhasil mengautentikasi, kita kembalikan respons sukses.
-    // Supabase akan mengelola sesi pengguna secara otomatis.
-    return NextResponse.json({ message: 'Login berhasil' }, { status: 200 });
+    // Jika Supabase berhasil mengautentikasi, kembalikan session data
+    if (data.session) {
+      return NextResponse.json({ 
+        message: 'Login berhasil',
+        session: data.session 
+      }, { status: 200 });
+    } else {
+      return NextResponse.json({ message: 'Login berhasil, tapi session tidak ditemukan.' }, { status: 200 });
+    }
 
   } catch (error) {
     // Menangani error umum seperti malformed JSON

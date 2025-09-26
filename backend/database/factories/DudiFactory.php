@@ -16,6 +16,9 @@ class DudiFactory extends Factory
             'alamat' => $this->faker->address(),
             'telepon' => $this->faker->phoneNumber(),
             'email' => $this->faker->unique()->safeEmail(),
+            'penanggung_jawab' => $this->faker->name(),
+            'jabatan' => $this->faker->jobTitle(),
+            'bidang_usaha' => $this->faker->randomElement(['Teknologi', 'Manufaktur', 'Jasa', 'Pendidikan', 'Kesehatan']),
         ];
     }
 }

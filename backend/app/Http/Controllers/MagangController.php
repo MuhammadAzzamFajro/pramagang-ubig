@@ -9,7 +9,8 @@ class MagangController extends Controller
 {
     public function index()
     {
-        return Magang::with(['siswa', 'dudi', 'guruPembimbing'])->get();
+        $magangs = Magang::with(['siswa.kelas', 'dudi', 'guruPembimbing'])->get();
+        return response()->json($magangs);
     }
 
     public function store(Request $request)
