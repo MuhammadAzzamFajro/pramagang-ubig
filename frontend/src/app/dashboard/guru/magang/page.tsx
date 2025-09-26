@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from 'next/navigation';
+import Navbar from "@/components/Navbar";
+import Card from "@/components/Card";
+import Table from "@/components/Table";
+import { FaUserGraduate, FaCheckCircle, FaClock, FaExclamationTriangle } from "react-icons/fa";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -32,22 +36,16 @@ interface Dudi {
 }
 
 export default function ManajemenMagangPage() {
+  const router = useRouter();
   const [students, setStudents] = useState<InternStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-       if (!token) {
-        console.error('No auth token found. Redirecting to login.');
-        // Redirect the user to the login page
-        // You'll need to use a router for this, like from 'next/navigation'
-        window.location.href = '/login'; // Simple redirect for demonstration
-        return; // Stop the function execution
-      }
-
         const headers = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -61,6 +59,11 @@ export default function ManajemenMagangPage() {
         });
 
         if (!magangRes.ok) {
+          if (magangRes.status === 401) {
+            localStorage.removeItem('token');
+            router.push('/login');
+            return;
+          }
           console.error('Magang API error:', magangRes.status, magangRes.statusText);
           throw new Error(`Magang fetch failed: ${magangRes.statusText}`);
         }
@@ -214,10 +217,10 @@ export default function ManajemenMagangPage() {
       }
     };
 
-     fetchData();
-}, []);
+    fetchData();
+  }, [router]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6 text-white">Loading...</div>;
 
   // Hitung statistik
   const total = students.length;
@@ -225,90 +228,82 @@ export default function ManajemenMagangPage() {
   const selesai = students.filter(s => s.status === "Selesai").length;
   const pending = students.filter(s => s.status === "Pending").length;
 
-  return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Manajemen Siswa Magang</h1>
-      <p className="text-gray-600">
-        Kelola data siswa yang sedang melaksanakan magang di industri
-      </p>
+  const stats = [
+    { title: "Total Siswa Magang", value: total.toString(), icon: <FaUserGraduate /> },
+    { title: "Status Aktif", value: aktif.toString(), icon: <FaCheckCircle /> },
+    { title: "Selesai", value: selesai.toString(), icon: <FaClock /> },
+    { title: "Pending", value: pending.toString(), icon: <FaExclamationTriangle /> },
+  ];
 
-      {/* Statistik */}
-      <div className="grid grid-cols-4 gap-4">
-        <CardStat title="Total Siswa" value={total} />
-        <CardStat title="Aktif" value={aktif} />
-        <CardStat title="Selesai" value={selesai} />
-        <CardStat title="Pending" value={pending} />
+  const tableHeaders = ["Siswa", "Kelas", "DUDI", "Periode", "Status", "Nilai", "Aksi"];
+
+  const tableData = students.map((s) => ({
+    siswa: (
+      <div>
+        <div className="font-semibold">{s.nama}</div>
+        <div className="text-xs text-gray-500">NIS: {s.nis}</div>
+        <div className="text-xs text-gray-400">{s.email} | {s.kontak}</div>
       </div>
+    ),
+    kelas: s.kelas,
+    dudi: s.dudi,
+    periode: `${s.start_date} s.d ${s.end_date}`,
+    status: (
+      <span
+        className={`px-2 py-1 rounded text-xs ${
+          s.status === "Aktif"
+            ? "bg-green-100 text-green-700"
+            : s.status === "Selesai"
+            ? "bg-blue-100 text-blue-700"
+            : "bg-yellow-100 text-yellow-700"
+        }`}
+      >
+        {s.status}
+      </span>
+    ),
+    nilai: s.nilai,
+    aksi: <button className="text-blue-500 hover:underline">Edit</button>,
+  }));
 
-      {/* Tombol Aksi */}
-      <div className="flex justify-between items-center">
-        <input
-          type="text"
-          placeholder="Cari siswa, NIS, kelas, DUDI..."
-          className="border px-3 py-2 rounded-md w-1/3"
-        />
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-blue-500 text-white rounded-md">
-            + Tambah Siswa
-          </button>
-          <button className="px-4 py-2 bg-green-500 text-white rounded-md">
-            Download PDF
-          </button>
+  return (
+    <>
+      <Navbar />
+      <div className="p-6 space-y-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white">Manajemen Siswa Magang</h1>
+          <p className="text-white">Kelola data siswa yang sedang melaksanakan magang di industri</p>
+        </div>
+
+        {/* Statistik */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((item, index) => (
+            <Card key={index} title={item.title} value={item.value} icon={item.icon} />
+          ))}
+        </div>
+
+        {/* Tombol Aksi */}
+        <div className="flex justify-between items-center mb-6">
+          <input
+            type="text"
+            placeholder="Cari siswa, NIS, kelas, DUDI..."
+            className="flex-1 max-w-md rounded-lg border border-gray-600 bg-gray-800 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+          />
+          <div className="flex gap-2">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              + Tambah Siswa
+            </button>
+            <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+              Download PDF
+            </button>
+          </div>
+        </div>
+
+        {/* Tabel */}
+        <div className="bg-white rounded-lg shadow-lg">
+          <Table headers={tableHeaders} data={tableData} />
         </div>
       </div>
-
-      {/* Tabel */}
-      <div className="overflow-x-auto border rounded-md">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2 text-left">Siswa</th>
-              <th className="px-4 py-2 text-left">Kelas</th>
-              <th className="px-4 py-2 text-left">DUDI</th>
-              <th className="px-4 py-2 text-left">Periode</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Nilai</th>
-              <th className="px-4 py-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.id} className="border-t">
-                <td className="px-4 py-2">
-                  <div className="font-semibold">{s.nama}</div>
-                  <div className="text-xs text-gray-600">NIS: {s.nis}</div>
-                  <div className="text-xs text-gray-500">
-                    {s.email} | {s.kontak}
-                  </div>
-                </td>
-                <td className="px-4 py-2">{s.kelas}</td>
-                <td className="px-4 py-2">{s.dudi}</td>
-                <td className="px-4 py-2">
-                  {s.start_date} s.d {s.end_date}
-                </td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`px-2 py-1 rounded text-xs ${
-                      s.status === "Aktif"
-                        ? "bg-green-100 text-green-700"
-                        : s.status === "Selesai"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {s.status}
-                  </span>
-                </td>
-                <td className="px-4 py-2">{s.nilai}</td>
-                <td className="px-4 py-2 text-center">
-                  <button className="text-blue-500 hover:underline">Edit</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </>
   );
 }
 

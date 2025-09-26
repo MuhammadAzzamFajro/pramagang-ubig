@@ -10,6 +10,10 @@ use App\Http\Controllers\LogbookController;
 use App\Http\Controllers\DudiController;
 use App\Http\Controllers\MagangController;
 
+// Public auth routes
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
 Route::middleware('auth:sanctum')->group(function () {
     // Student management
     Route::apiResource('siswa', SiswaController::class)->except(['index', 'show']);
@@ -32,4 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Magang management ✅
     Route::apiResource('magang', MagangController::class);
+    Route::get('/magang/siswa/{siswaId}', [MagangController::class, 'getBySiswa']);
+
+    // Token verification
+    Route::post('/verify-token', [AuthController::class, 'verifyToken']);
 });

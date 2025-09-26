@@ -39,7 +39,6 @@ export default function Sidebar() {
       <h2 className="px-6 text-lg font-semibold mb-8">Portal Siswa</h2>
 
       <nav className="flex flex-col gap-2 px-4">
-        {" "}
         {menus.map((menu) => {
           const isDashboardLink = menu.href === "/dashboard/siswa";
           const active = isDashboardLink ? pathname === menu.href : pathname.startsWith(menu.href);

@@ -3,7 +3,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -27,14 +26,9 @@ const LoginPage = () => {
 
       const data = await response.json();
 
-      if (response.ok && data.session) {
-        // Set session di Supabase client
-        const { error: setSessionError } = await supabase.auth.setSession(data.session);
-        if (setSessionError) {
-          throw new Error('Gagal menyimpan session: ' + setSessionError.message);
-        }
-        // Simpan token di localStorage untuk persistence
-        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+      if (response.ok && data.token) {
+        // Simpan token di localStorage untuk API calls
+        localStorage.setItem('token', data.token);
         router.push('/dashboard/guru');
       } else {
         setError(data.message || 'Login gagal. Periksa kembali email dan password Anda.');

@@ -1,17 +1,10 @@
-# TODO: Rename Magang Table to magangs_siswa
+# TODO: Fix Sanctum Session Redirect Error in MagangController
 
-## Backend Changes
-- [x] Update migration file: backend/database/migrations/2025_09_25_011043_create_magangs_siswa_table.php - Change Schema::create('magangs') to Schema::create('magangs_siswa') and dropIfExists accordingly
-- [x] Update model: backend/app/Models/Magang.php - Change $table = 'magangs' to $table = 'magangs_siswa'
+## Steps to Complete:
 
-## Frontend Changes
-- [x] Update seed script: frontend/scripts/seed-magang.js - Change .from('magangs') to .from('magangs_siswa')
-- [x] Update siswa dashboard: frontend/src/app/dashboard/siswa/page.tsx - Change .from("magangs") to .from("magangs_siswa")
-- [x] Update guru dashboard: frontend/src/app/dashboard/guru/page.tsx - Change both .from("magangs") to .from("magangs_siswa")
-- [x] Update guru magang page: frontend/src/app/dashboard/guru/magang/page.tsx - Change .from('magang') to .from('magangs_siswa')
+- [x] Update backend/config/sanctum.php: Set 'stateful' to empty array [] and 'guard' to empty array [] to disable session-based auth and force token-only.
+- [x] Update backend/routes/api.php: Add POST /api/verify-token route under the 'auth:sanctum' group, mapping to [AuthController::class, 'verifyToken'].
+- [x] Clear Laravel config and route cache: Execute `php artisan config:clear && php artisan route:clear`.
+- [x] Verify the fix: Test unauthenticated request to /api/magang should return 401 JSON (not redirect), and authenticated should work.
 
-## Followup Steps
-- [ ] Run php artisan migrate:fresh in backend to apply new schema
-- [ ] Update Supabase table name to 'magangs_siswa' manually
-- [ ] Test backend seeder and frontend seed script
-- [ ] Verify API endpoints and frontend pages load data correctly
+After all steps, mark as complete and remove this file if desired.

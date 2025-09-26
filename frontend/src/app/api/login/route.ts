@@ -7,32 +7,37 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
 
-    // Menggunakan Supabase untuk autentikasi
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Call Laravel backend login endpoint
+    const backendResponse = await fetch('http://localhost:8000/api/login', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-   if (error) {
-      console.error('Login error:', error.message);
-      
-      // Memberikan pesan error yang lebih spesifik
-      if (error.message.includes("Email not confirmed")) {
-        return NextResponse.json({ message: 'Login gagal. Silakan cek email Anda untuk verifikasi akun.' }, { status: 401 });
-      } else {
-        return NextResponse.json({ message: 'Email atau password salah.' }, { status: 401 });
-      }
+    const backendData = await backendResponse.json();
+
+    if (!backendResponse.ok) {
+      console.error('Backend login error:', backendData.message);
+      return NextResponse.json({ 
+        message: backendData.message || 'Email atau password salah.' 
+      }, { status: 401 });
     }
 
-    // Jika Supabase berhasil mengautentikasi, kembalikan session data
-    if (data.session) {
+    // If successful, return the token from Laravel
+    if (backendData.token) {
       return NextResponse.json({ 
         message: 'Login berhasil',
-        session: data.session 
+        token: backendData.token 
       }, { status: 200 });
     } else {
-      return NextResponse.json({ message: 'Login berhasil, tapi session tidak ditemukan.' }, { status: 200 });
+      return NextResponse.json({ message: 'Login berhasil, tapi token tidak ditemukan.' }, { status: 200 });
     }
 
   } catch (error) {
-    // Menangani error umum seperti malformed JSON
+    console.error('Login error:', error);
     return NextResponse.json({ message: 'Terjadi kesalahan server' }, { status: 500 });
   }
 }
