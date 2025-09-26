@@ -31,7 +31,7 @@ async function getDashboardData() {
       guru: "Pak Andi",
       tanggal_mulai: "2025-01-10",
       tanggal_selesai: "2025-04-10",
-      status: "Aktif"
+      status: "Aktif",
     },
     {
       id: 2,
@@ -40,7 +40,7 @@ async function getDashboardData() {
       guru: "Bu Siti",
       tanggal_mulai: "2025-02-01",
       tanggal_selesai: "2025-05-01",
-      status: "Pending"
+      status: "Pending",
     },
     {
       id: 3,
@@ -49,8 +49,8 @@ async function getDashboardData() {
       guru: "Pak Joko",
       tanggal_mulai: "2025-01-15",
       tanggal_selesai: "2025-04-15",
-      status: "Aktif"
-    }
+      status: "Aktif",
+    },
   ];
 
   const startOfDay = new Date();
@@ -58,11 +58,7 @@ async function getDashboardData() {
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
 
-  const logRes = await supabase
-    .from("logbooks")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", startOfDay.toISOString())
-    .lte("created_at", endOfDay.toISOString());
+  const logRes = await supabase.from("logbooks").select("*", { count: "exact", head: true }).gte("created_at", startOfDay.toISOString()).lte("created_at", endOfDay.toISOString());
 
   const todayLogCount = logRes?.count ?? 0;
 
@@ -77,8 +73,7 @@ async function getDashboardData() {
 }
 
 const DashboardPage = async () => {
-  const { totalStudents, totalPartners, totalInterns, totalGurus, recentMagangs, todayLogCount } =
-    await getDashboardData();
+  const { totalStudents, totalPartners, totalInterns, totalGurus, recentMagangs, todayLogCount } = await getDashboardData();
 
   const activePercent = totalStudents > 0 ? Math.round((totalInterns / totalStudents) * 100) : 0;
   const logbookPercent = 100;
@@ -94,16 +89,13 @@ const DashboardPage = async () => {
     <>
       <Navbar />
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 mt-9">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
           <p className="text-gray-600">Selamat datang di sistem pelaporan magang siswa SMK Negeri 1 Surabaya</p>
         </div>
 
-        {/* client navigation tabs */}
         <div>
-          {/* DashboardTabs adalah client component yang akan router.push ke /dashboard/siswa atau /dashboard/guru */}
-          {/* It lives at: src/components/ui/tabs.tsx */}
           <DashboardTabs />
         </div>
       </div>
@@ -111,9 +103,7 @@ const DashboardPage = async () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {metrics.map((m, i) => (
           <div key={i} className="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-lg flex items-center justify-center">
-              {m.icon}
-            </div>
+            <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-lg flex items-center justify-center">{m.icon}</div>
             <div>
               <p className="text-sm text-gray-500">{m.title}</p>
               <p className="text-2xl font-semibold text-gray-800">{m.value}</p>
@@ -136,31 +126,20 @@ const DashboardPage = async () => {
             {recentMagangs.map((m: any) => (
               <div key={m.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 font-bold">
-                    {String(m.nama).charAt(0) || "U"}
-                  </div>
+                  <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 font-bold">{String(m.nama).charAt(0) || "U"}</div>
                   <div>
                     <p className="font-medium text-gray-800">{m.nama}</p>
                     <p className="text-sm text-gray-500">
                       {m.dudi} • <span className="text-xs text-gray-400">Pembimbing: {m.guru}</span>
                     </p>
                     <p className="text-xs text-gray-400">
-                      {m.tanggal_mulai ? new Date(m.tanggal_mulai).toLocaleDateString() : "-"} —{" "}
-                      {m.tanggal_selesai ? new Date(m.tanggal_selesai).toLocaleDateString() : "..."}
+                      {m.tanggal_mulai ? new Date(m.tanggal_mulai).toLocaleDateString() : "-"} — {m.tanggal_selesai ? new Date(m.tanggal_selesai).toLocaleDateString() : "..."}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-end">
-                  <span
-                    className={`text-sm px-3 py-1 rounded-full ${
-                      String(m.status).toLowerCase().includes("aktif")
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {m.status ?? "Aktif"}
-                  </span>
+                  <span className={`text-sm px-3 py-1 rounded-full ${String(m.status).toLowerCase().includes("aktif") ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{m.status ?? "Aktif"}</span>
                 </div>
               </div>
             ))}

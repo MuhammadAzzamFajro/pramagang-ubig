@@ -53,7 +53,7 @@ const DashboardPage = async () => {
       <main className="flex-1 p-6">
         <Navbar />
 
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 mt-9">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
             <p className="text-gray-600">Selamat datang di portal siswa SMK Negeri 1 Surabaya</p>
